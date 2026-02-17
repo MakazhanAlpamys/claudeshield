@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -354,8 +355,10 @@ func parseMemoryLimit(s string) int64 {
 		s = strings.TrimSuffix(s, "m")
 	}
 
-	var val int64
-	fmt.Sscanf(s, "%d", &val)
+	val, err := strconv.ParseInt(s, 10, 64)
+	if err != nil {
+		return 0
+	}
 	return val * multiplier
 }
 
