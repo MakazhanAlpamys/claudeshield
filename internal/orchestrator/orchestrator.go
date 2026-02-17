@@ -3,6 +3,7 @@ package orchestrator
 import (
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"sync"
@@ -39,6 +40,13 @@ func (o *Orchestrator) SpawnAgent(ctx context.Context, projectDir string, agentN
 		return nil, fmt.Errorf("agent %q already exists", agentName)
 	}
 
+	// Ensure absolute path for Docker mounts
+	absProjectDir, err := filepath.Abs(projectDir)
+	if err != nil {
+		return nil, fmt.Errorf("resolving project dir: %w", err)
+	}
+	projectDir = absProjectDir
+
 	// Create git worktree for isolation
 	worktreeDir, err := createWorktree(projectDir, agentName)
 	if err != nil {
@@ -65,7 +73,21 @@ func (o *Orchestrator) StopAgent(ctx context.Context, agentName string, merge bo
 
 	session, ok := o.sessions[agentName]
 	if !ok {
-		return fmt.Errorf("agent %q not found", agentName)
+		// Try to find the session from running Docker containers
+		sessions, err := o.engine.ListSessions(ctx)
+		if err != nil {
+			return fmt.Errorf("listing sessions: %w", err)
+		}
+		for _, s := range sessions {
+			if s.AgentName == agentName {
+				session = s
+				ok = true
+				break
+			}
+		}
+		if !ok {
+			return fmt.Errorf("agent %q not found", agentName)
+		}
 	}
 
 	// Stop sandbox
@@ -104,6 +126,17 @@ func (o *Orchestrator) ListAgents() map[string]*types.Session {
 func createWorktree(projectDir, agentName string) (string, error) {
 	branchName := "claudeshield/" + agentName
 	worktreeDir := filepath.Join(projectDir, ".claudeshield", "worktrees", agentName)
+
+	// Prune stale worktrees first
+	pruneCmd := exec.Command("git", "-C", projectDir, "worktree", "prune")
+	_ = pruneCmd.Run()
+
+	// Remove leftover directory if it exists
+	_ = os.RemoveAll(worktreeDir)
+
+	// Delete branch if it already exists (from previous run)
+	delCmd := exec.Command("git", "-C", projectDir, "branch", "-D", branchName)
+	_ = delCmd.Run()
 
 	// Create branch
 	cmd := exec.Command("git", "-C", projectDir, "branch", branchName)

@@ -2,8 +2,11 @@ package sandbox
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -55,6 +58,13 @@ func (e *Engine) Client() *client.Client {
 func (e *Engine) CreateSession(ctx context.Context, projectDir string, cfg types.SandboxConfig, agentName string, secrets map[string]string) (*types.Session, error) {
 	sessionID := fmt.Sprintf("cs-%s-%d", agentName, time.Now().UnixMilli())
 
+	// Ensure absolute path for Docker mounts
+	absProjectDir, err := filepath.Abs(projectDir)
+	if err != nil {
+		return nil, fmt.Errorf("resolving project dir: %w", err)
+	}
+	projectDir = absProjectDir
+
 	if err := e.ensureImage(ctx); err != nil {
 		return nil, err
 	}
@@ -62,6 +72,17 @@ func (e *Engine) CreateSession(ctx context.Context, projectDir string, cfg types
 	mounts, err := e.buildMounts(projectDir, cfg)
 	if err != nil {
 		return nil, err
+	}
+
+	// Generate and mount policy file if policy engine is configured
+	if e.policy != nil {
+		policyMount, err := e.generatePolicyMount(projectDir)
+		if err != nil {
+			return nil, fmt.Errorf("generating policy file: %w", err)
+		}
+		if policyMount != nil {
+			mounts = append(mounts, *policyMount)
+		}
 	}
 
 	hostCfg := &container.HostConfig{
@@ -98,6 +119,13 @@ func (e *Engine) CreateSession(ctx context.Context, projectDir string, cfg types
 		envVars = append(envVars, fmt.Sprintf("%s=%s", k, v))
 	}
 
+	// Use policy shell wrapper if policy engine is configured
+	shellCmd := []string{"sleep", "infinity"}
+	if e.policy != nil {
+		envVars = append(envVars, "SHELL=/usr/local/bin/claudeshield-shell")
+		shellCmd = []string{"/usr/local/bin/claudeshield-shell"}
+	}
+
 	containerCfg := &container.Config{
 		Image: SandboxImage,
 		Labels: map[string]string{
@@ -107,6 +135,7 @@ func (e *Engine) CreateSession(ctx context.Context, projectDir string, cfg types
 			"claudeshield.project":   projectDir,
 		},
 		Env:        envVars,
+		Cmd:        shellCmd,
 		WorkingDir: "/workspace",
 		Tty:        true,
 		OpenStdin:  true,
@@ -328,4 +357,53 @@ func parseMemoryLimit(s string) int64 {
 	var val int64
 	fmt.Sscanf(s, "%d", &val)
 	return val * multiplier
+}
+
+// policyFile is the JSON structure mounted into the container for the shell wrapper.
+type policyFile struct {
+	Allow []policyRule `json:"allow"`
+	Block []policyRule `json:"block"`
+}
+
+type policyRule struct {
+	Pattern string `json:"pattern"`
+	Reason  string `json:"reason,omitempty"`
+}
+
+// generatePolicyMount writes the policy rules to a temp file and returns a mount for it.
+func (e *Engine) generatePolicyMount(projectDir string) (*mount.Mount, error) {
+	if e.policy == nil {
+		return nil, nil
+	}
+
+	cfg := e.policy.Config()
+
+	pf := policyFile{}
+	for _, r := range cfg.Rules.Allow {
+		pf.Allow = append(pf.Allow, policyRule{Pattern: r.Pattern})
+	}
+	for _, r := range cfg.Rules.Block {
+		pf.Block = append(pf.Block, policyRule{Pattern: r.Pattern, Reason: r.Reason})
+	}
+
+	policyDir := filepath.Join(projectDir, ".claudeshield")
+	if err := os.MkdirAll(policyDir, 0700); err != nil {
+		return nil, err
+	}
+
+	policyPath := filepath.Join(policyDir, "policy.json")
+	data, err := json.MarshalIndent(pf, "", "  ")
+	if err != nil {
+		return nil, err
+	}
+	if err := os.WriteFile(policyPath, data, 0600); err != nil {
+		return nil, err
+	}
+
+	return &mount.Mount{
+		Type:     mount.TypeBind,
+		Source:   policyPath,
+		Target:   "/etc/claudeshield/policy.json",
+		ReadOnly: true,
+	}, nil
 }

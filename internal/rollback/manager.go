@@ -2,7 +2,10 @@ package rollback
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/MakazhanAlpamys/claudeshield/pkg/types"
@@ -14,14 +17,48 @@ import (
 type Manager struct {
 	client      *client.Client
 	checkpoints map[string][]types.Checkpoint
+	storagePath string
 }
 
-// New creates a new rollback manager.
-func New(cli *client.Client) *Manager {
-	return &Manager{
+// New creates a new rollback manager with disk-backed checkpoint storage.
+// If storagePath is empty, checkpoints are stored in-memory only.
+func New(cli *client.Client, storagePath string) *Manager {
+	m := &Manager{
 		client:      cli,
 		checkpoints: make(map[string][]types.Checkpoint),
+		storagePath: storagePath,
 	}
+	if storagePath != "" {
+		_ = m.load()
+	}
+	return m
+}
+
+// load reads checkpoints from disk.
+func (m *Manager) load() error {
+	data, err := os.ReadFile(m.storagePath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	return json.Unmarshal(data, &m.checkpoints)
+}
+
+// save writes checkpoints to disk.
+func (m *Manager) save() error {
+	if m.storagePath == "" {
+		return nil
+	}
+	if err := os.MkdirAll(filepath.Dir(m.storagePath), 0700); err != nil {
+		return err
+	}
+	data, err := json.MarshalIndent(m.checkpoints, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(m.storagePath, data, 0600)
 }
 
 // CreateCheckpoint creates a snapshot of the container state.
@@ -46,6 +83,7 @@ func (m *Manager) CreateCheckpoint(ctx context.Context, session *types.Session, 
 	}
 
 	m.checkpoints[session.ID] = append(m.checkpoints[session.ID], cp)
+	_ = m.save()
 	return &cp, nil
 }
 

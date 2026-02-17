@@ -17,6 +17,11 @@ func New(cfg *types.ProjectConfig) *Engine {
 	return &Engine{config: cfg}
 }
 
+// Config returns the underlying project config.
+func (e *Engine) Config() *types.ProjectConfig {
+	return e.config
+}
+
 // Result contains the outcome of a policy evaluation.
 type Result struct {
 	Allowed bool

@@ -34,6 +34,13 @@ ENV PATH="/usr/local/go/bin:${PATH}"
 # Create non-root user for sandbox
 RUN groupadd -r sandbox && useradd -r -g sandbox -m -s /bin/bash sandbox
 
+# Install ClaudeShield policy shell wrapper
+COPY claudeshield-shell.sh /usr/local/bin/claudeshield-shell
+RUN chmod +x /usr/local/bin/claudeshield-shell
+
+# Create policy directory
+RUN mkdir -p /etc/claudeshield && chown sandbox:sandbox /etc/claudeshield
+
 # Set up workspace
 RUN mkdir -p /workspace && chown sandbox:sandbox /workspace
 WORKDIR /workspace

@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 
 	"github.com/MakazhanAlpamys/claudeshield/internal/audit"
 	"github.com/MakazhanAlpamys/claudeshield/internal/config"
@@ -39,7 +40,7 @@ var rollbackCmd = &cobra.Command{
 		}
 		defer engine.Close()
 
-		mgr := rollback.New(engine.Client())
+		mgr := rollback.New(engine.Client(), filepath.Join(projectDir, ".claudeshield", "checkpoints.json"))
 
 		ctx := context.Background()
 
