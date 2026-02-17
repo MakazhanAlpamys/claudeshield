@@ -1,7 +1,6 @@
 package secrets
 
 import (
-	"os"
 	"testing"
 )
 
@@ -13,10 +12,8 @@ func TestEnvProvider_Available(t *testing.T) {
 }
 
 func TestEnvProvider_Load(t *testing.T) {
-	os.Setenv("CS_TEST_KEY_1", "value1")
-	os.Setenv("CS_TEST_KEY_2", "value2")
-	defer os.Unsetenv("CS_TEST_KEY_1")
-	defer os.Unsetenv("CS_TEST_KEY_2")
+	t.Setenv("CS_TEST_KEY_1", "value1")
+	t.Setenv("CS_TEST_KEY_2", "value2")
 
 	p := &EnvProvider{}
 	result, err := p.Load([]string{"CS_TEST_KEY_1", "CS_TEST_KEY_2"})

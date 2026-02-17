@@ -45,8 +45,8 @@ var startCmd = &cobra.Command{
 		if err == nil && provider.Available() {
 			// Load secret keys from config options if specified
 			var secretKeys []string
-			for k := range cfg.Secrets.Options {
-				secretKeys = append(secretKeys, cfg.Secrets.Options[k])
+			for _, v := range cfg.Secrets.Options {
+				secretKeys = append(secretKeys, v)
 			}
 			if len(secretKeys) > 0 {
 				loadedSecrets, err = provider.Load(secretKeys)

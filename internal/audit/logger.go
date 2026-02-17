@@ -1,11 +1,11 @@
 package audit
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 	"time"
 
@@ -86,7 +86,7 @@ func readLogFile(path, sessionID string) ([]types.AuditEntry, error) {
 	}
 
 	var entries []types.AuditEntry
-	dec := json.NewDecoder(strings.NewReader(string(data)))
+	dec := json.NewDecoder(bytes.NewReader(data))
 
 	for dec.More() {
 		var entry types.AuditEntry

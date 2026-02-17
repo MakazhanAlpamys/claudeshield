@@ -5,7 +5,7 @@
 > Work with Claude Code at full speed — without risking your machine or secrets.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Go](https://img.shields.io/badge/Go-1.23+-00ADD8?logo=go)](https://go.dev)
+[![Go](https://img.shields.io/badge/Go-1.24+-00ADD8?logo=go)](https://go.dev)
 [![Docker](https://img.shields.io/badge/Docker-required-2496ED?logo=docker)](https://docs.docker.com/get-docker/)
 [![CI](https://github.com/MakazhanAlpamys/claudeshield/actions/workflows/ci.yml/badge.svg)](https://github.com/MakazhanAlpamys/claudeshield/actions)
 
@@ -44,7 +44,7 @@ But this creates real risks:
 
 - [Docker](https://docs.docker.com/get-docker/) installed and running
 - [Git](https://git-scm.com/) (for multi-agent worktrees)
-- [Go 1.23+](https://go.dev/dl/) (to build from source)
+- [Go 1.24+](https://go.dev/dl/) (to build from source)
 
 ### Install from source
 

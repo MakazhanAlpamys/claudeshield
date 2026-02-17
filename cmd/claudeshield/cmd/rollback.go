@@ -55,7 +55,7 @@ var rollbackCmd = &cobra.Command{
 		}
 
 		// Pick session: use --session flag or default to first active one
-		var targetSession = sessions[0]
+		targetSession := sessions[0]
 		if sessionID != "" {
 			found := false
 			for _, s := range sessions {

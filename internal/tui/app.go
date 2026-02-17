@@ -3,6 +3,7 @@ package tui
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -20,13 +21,6 @@ var (
 			Bold(true).
 			Foreground(lipgloss.Color("#00D4FF")).
 			Padding(0, 1)
-
-	statusRunning = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#00FF88")).
-			Bold(true)
-
-	statusStopped = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#FF6666"))
 
 	statusBlocked = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#FF4444")).
@@ -275,7 +269,7 @@ func (m *Model) renderAudit() string {
 		return borderStyle.Render("No audit entries yet.")
 	}
 
-	content := ""
+	var b strings.Builder
 	start := 0
 	if len(m.auditLog) > 20 {
 		start = len(m.auditLog) - 20
@@ -287,16 +281,15 @@ func (m *Model) renderAudit() string {
 			actionStyle = statusBlocked
 		}
 
-		line := fmt.Sprintf("[%s] %s %s %s",
+		fmt.Fprintf(&b, "[%s] %s %s %s\n",
 			entry.Timestamp.Format("15:04:05"),
 			actionStyle.Render(string(entry.Action)),
 			entry.Command,
 			entry.Reason,
 		)
-		content += line + "\n"
 	}
 
-	return borderStyle.Render(content)
+	return borderStyle.Render(b.String())
 }
 
 func (m *Model) renderRules() string {

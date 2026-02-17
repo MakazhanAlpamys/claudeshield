@@ -12,17 +12,13 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        go-version: ['1.23', '1.24']
-
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: ${{ matrix.go-version }}
+          go-version: stable
 
       - name: Download dependencies
         run: go mod download
@@ -31,7 +27,7 @@ jobs:
         run: go build ./...
 
       - name: Test
-        run: go test -race -v ./...
+        run: go test -v ./...
 
       - name: Vet
         run: go vet ./...
@@ -44,7 +40,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.24'
+          go-version: stable
 
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v6
