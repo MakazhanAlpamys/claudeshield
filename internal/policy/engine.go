@@ -67,30 +67,52 @@ func (e *Engine) EvaluateCommand(command string) Result {
 
 // EvaluateFileAccess checks if access to a file path is allowed.
 func (e *Engine) EvaluateFileAccess(path string) Result {
-	// Block sensitive files
-	sensitivePatterns := []string{
-		"*/.env",
-		"*/.env.*",
-		"*/.ssh/*",
-		"*/.aws/*",
-		"*/.gnupg/*",
-		"*/.docker/config.json",
-		"*/id_rsa",
-		"*/id_ed25519",
-		"*/.bash_history",
-		"*/.zsh_history",
-		"*/.gitconfig",
-		"*/.npmrc",
-		"*/.pypirc",
-	}
+	base := filepath.Base(path)
 
-	for _, pattern := range sensitivePatterns {
-		if matched, _ := filepath.Match(pattern, path); matched {
+	// Block sensitive filenames
+	sensitiveFiles := []string{
+		".env", ".npmrc", ".pypirc",
+		".bash_history", ".zsh_history",
+		".gitconfig", "id_rsa", "id_ed25519",
+	}
+	for _, name := range sensitiveFiles {
+		if base == name {
 			return Result{
 				Allowed: false,
 				Action:  types.ActionBlock,
 				Reason:  "Access to sensitive file blocked: " + path,
 			}
+		}
+	}
+
+	// Block .env.* variants (e.g. .env.local, .env.production)
+	if strings.HasPrefix(base, ".env.") {
+		return Result{
+			Allowed: false,
+			Action:  types.ActionBlock,
+			Reason:  "Access to sensitive file blocked: " + path,
+		}
+	}
+
+	// Block sensitive directories
+	sensitiveParents := []string{".ssh", ".aws", ".gnupg"}
+	dir := filepath.Dir(path)
+	for _, sd := range sensitiveParents {
+		if filepath.Base(dir) == sd || strings.Contains(path, "/"+sd+"/") {
+			return Result{
+				Allowed: false,
+				Action:  types.ActionBlock,
+				Reason:  "Access to sensitive file blocked: " + path,
+			}
+		}
+	}
+
+	// Block docker config specifically
+	if base == "config.json" && strings.Contains(path, ".docker") {
+		return Result{
+			Allowed: false,
+			Action:  types.ActionBlock,
+			Reason:  "Access to sensitive file blocked: " + path,
 		}
 	}
 
