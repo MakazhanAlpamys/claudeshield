@@ -1,0 +1,37 @@
+# Binaries
+bin/
+dist/
+
+# Test artifacts
+testproject/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# ClaudeShield runtime data
+.claudeshield/logs/
+.claudeshield/worktrees/
+.claudeshield/checkpoints/
+
+# Secrets (never commit!)
+.env
+.env.*
+*.pem
+*.key

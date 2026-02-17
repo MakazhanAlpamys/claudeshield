@@ -1,0 +1,59 @@
+project_name: claudeshield
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: claudeshield
+    main: ./cmd/claudeshield
+    binary: claudeshield
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X github.com/claudeshield/claudeshield/cmd/claudeshield/cmd.version={{.Version}}
+
+archives:
+  - id: default
+    formats:
+      - tar.gz
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^ci:"
+
+brews:
+  - repository:
+      owner: claudeshield
+      name: homebrew-tap
+    homepage: "https://github.com/claudeshield/claudeshield"
+    description: "Secure sandbox for Claude Code agents"
+    install: |
+      bin.install "claudeshield"
+
+scoops:
+  - repository:
+      owner: claudeshield
+      name: scoop-bucket
+    homepage: "https://github.com/claudeshield/claudeshield"
+    description: "Secure sandbox for Claude Code agents"
